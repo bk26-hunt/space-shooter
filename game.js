@@ -384,6 +384,15 @@ const fireButtonY = () => canvas.height - 120;
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
 
+    // Handle menu navigation - tap anywhere to proceed
+    if (gameState === 'start') {
+        gameState = 'shipSelect';
+        return;
+    } else if (gameState === 'gameOver') {
+        gameState = 'shipSelect';
+        return;
+    }
+
     for (let touch of e.changedTouches) {
         const x = touch.clientX;
         const y = touch.clientY;
@@ -394,13 +403,6 @@ canvas.addEventListener('touchstart', (e) => {
         if (Math.hypot(x - fbX, y - fbY) < fireButtonRadius * 1.5) {
             touchState.fire.active = true;
             touchState.fire.id = touch.identifier;
-
-            // Handle menu navigation with fire button
-            if (gameState === 'start') {
-                gameState = 'shipSelect';
-            } else if (gameState === 'gameOver') {
-                gameState = 'shipSelect';
-            }
             continue;
         }
 
@@ -1760,12 +1762,17 @@ function drawStartScreen() {
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '28px Arial';
-    ctx.fillText('Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillText(isMobile ? 'Tap to Start' : 'Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 20);
 
     ctx.font = '20px Arial';
     ctx.fillStyle = '#aaaaaa';
-    ctx.fillText('Arrow Keys / WASD to Move', canvas.width / 2, canvas.height / 2 + 70);
-    ctx.fillText('SPACE to Shoot', canvas.width / 2, canvas.height / 2 + 100);
+    if (isMobile) {
+        ctx.fillText('Use joystick to move', canvas.width / 2, canvas.height / 2 + 70);
+        ctx.fillText('FIRE button to shoot', canvas.width / 2, canvas.height / 2 + 100);
+    } else {
+        ctx.fillText('Arrow Keys / WASD to Move', canvas.width / 2, canvas.height / 2 + 70);
+        ctx.fillText('SPACE to Shoot', canvas.width / 2, canvas.height / 2 + 100);
+    }
 
     // Difficulty setting
     const diffSettings = gameDifficulty[currentDifficulty];
@@ -1929,7 +1936,7 @@ function drawShipSelectScreen() {
     // Instructions
     ctx.fillStyle = '#666666';
     ctx.font = '20px Arial';
-    ctx.fillText('Press 1, 2, or 3 to select your ship', canvas.width / 2, canvas.height - 80);
+    ctx.fillText(isMobile ? 'Tap a ship to select' : 'Press 1, 2, or 3 to select your ship', canvas.width / 2, canvas.height - 80);
 
     ctx.restore();
 }
@@ -1985,7 +1992,7 @@ function drawGameOverScreen() {
     // Restart instruction
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '24px Arial';
-    ctx.fillText('Press SPACE to Play Again', canvas.width / 2, canvas.height / 2 + 130);
+    ctx.fillText(isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again', canvas.width / 2, canvas.height / 2 + 130);
 
     ctx.restore();
 }
