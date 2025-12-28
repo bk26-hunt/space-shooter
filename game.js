@@ -352,9 +352,10 @@ window.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
-// Mobile touch controls
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                 ('ontouchstart' in window);
+// Mobile touch controls - detect touch capability
+const isMobile = ('ontouchstart' in window) ||
+                 (navigator.maxTouchPoints > 0) ||
+                 /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 const touchState = {
     joystick: {
