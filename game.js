@@ -1762,14 +1762,30 @@ function drawStartScreen() {
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '28px Arial';
-    ctx.fillText(isMobile ? 'Tap to Start' : 'Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 20);
-
-    ctx.font = '20px Arial';
-    ctx.fillStyle = '#aaaaaa';
     if (isMobile) {
-        ctx.fillText('Use joystick to move', canvas.width / 2, canvas.height / 2 + 70);
-        ctx.fillText('FIRE button to shoot', canvas.width / 2, canvas.height / 2 + 100);
+        // Draw a big START button for mobile
+        const btnY = canvas.height / 2 + 40;
+        const btnW = 200;
+        const btnH = 60;
+
+        ctx.fillStyle = '#00aa44';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#00ff66';
+        ctx.fillRect(canvas.width / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 28px Arial';
+        ctx.fillText('TAP TO START', canvas.width / 2, btnY + 10);
+
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText('Use joystick to move', canvas.width / 2, canvas.height / 2 + 110);
+        ctx.fillText('FIRE button to shoot', canvas.width / 2, canvas.height / 2 + 135);
     } else {
+        ctx.fillText('Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 20);
+        ctx.font = '20px Arial';
+        ctx.fillStyle = '#aaaaaa';
         ctx.fillText('Arrow Keys / WASD to Move', canvas.width / 2, canvas.height / 2 + 70);
         ctx.fillText('SPACE to Shoot', canvas.width / 2, canvas.height / 2 + 100);
     }
@@ -1926,6 +1942,26 @@ function drawShipSelectScreen() {
         // Shots
         ctx.fillStyle = shotColor;
         ctx.fillText(shotLabel, x, y + (isMobile ? 149 : 180));
+
+        // SELECT button for mobile
+        if (isMobile) {
+            const btnY = y + 185;
+            const btnW = 80;
+            const btnH = 35;
+
+            ctx.fillStyle = ship.color;
+            ctx.globalAlpha = 0.3;
+            ctx.fillRect(x - btnW / 2, btnY - btnH / 2, btnW, btnH);
+            ctx.globalAlpha = 1;
+
+            ctx.strokeStyle = ship.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - btnW / 2, btnY - btnH / 2, btnW, btnH);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('SELECT', x, btnY + 5);
+        }
     });
 
     // Instructions
@@ -1985,9 +2021,26 @@ function drawGameOverScreen() {
     }
 
     // Restart instruction
-    ctx.fillStyle = '#aaaaaa';
-    ctx.font = '24px Arial';
-    ctx.fillText(isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again', canvas.width / 2, canvas.height / 2 + 130);
+    if (isMobile) {
+        // Draw a PLAY AGAIN button for mobile
+        const btnY = canvas.height / 2 + 120;
+        const btnW = 180;
+        const btnH = 50;
+
+        ctx.fillStyle = '#00aa44';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00ff66';
+        ctx.fillRect(canvas.width / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText('PLAY AGAIN', canvas.width / 2, btnY + 8);
+    } else {
+        ctx.fillStyle = '#aaaaaa';
+        ctx.font = '24px Arial';
+        ctx.fillText('Press SPACE to Play Again', canvas.width / 2, canvas.height / 2 + 130);
+    }
 
     ctx.restore();
 }
