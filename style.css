@@ -4,13 +4,29 @@
     box-sizing: border-box;
 }
 
-body {
+html, body {
     overflow: hidden;
     background: #000;
+    width: 100%;
+    height: 100%;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior: none;
+    /* Prevent text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Prevent touch callouts */
+    -webkit-touch-callout: none;
+    /* Prevent tap highlight */
+    -webkit-tap-highlight-color: transparent;
 }
 
 #gameCanvas {
     display: block;
     width: 100vw;
     height: 100vh;
+    /* Handle safe areas for notched phones */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    touch-action: none;
 }

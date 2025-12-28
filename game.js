@@ -352,6 +352,176 @@ window.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
+// Mobile touch controls
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                 ('ontouchstart' in window);
+
+const touchState = {
+    joystick: {
+        active: false,
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        id: null
+    },
+    fire: {
+        active: false,
+        id: null
+    }
+};
+
+const joystickRadius = 60;
+const joystickX = 100;
+const joystickY = () => canvas.height - 120;
+
+const fireButtonRadius = 50;
+const fireButtonX = () => canvas.width - 100;
+const fireButtonY = () => canvas.height - 120;
+
+// Touch event handlers
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+
+    for (let touch of e.changedTouches) {
+        const x = touch.clientX;
+        const y = touch.clientY;
+
+        // Check if touch is on fire button (right side)
+        const fbX = fireButtonX();
+        const fbY = fireButtonY();
+        if (Math.hypot(x - fbX, y - fbY) < fireButtonRadius * 1.5) {
+            touchState.fire.active = true;
+            touchState.fire.id = touch.identifier;
+
+            // Handle menu navigation with fire button
+            if (gameState === 'start') {
+                gameState = 'shipSelect';
+            } else if (gameState === 'gameOver') {
+                gameState = 'shipSelect';
+            }
+            continue;
+        }
+
+        // Check if touch is on left side (joystick area)
+        if (x < canvas.width / 2 && !touchState.joystick.active) {
+            touchState.joystick.active = true;
+            touchState.joystick.startX = x;
+            touchState.joystick.startY = y;
+            touchState.joystick.currentX = x;
+            touchState.joystick.currentY = y;
+            touchState.joystick.id = touch.identifier;
+        }
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+
+    for (let touch of e.changedTouches) {
+        if (touch.identifier === touchState.joystick.id) {
+            touchState.joystick.currentX = touch.clientX;
+            touchState.joystick.currentY = touch.clientY;
+        }
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+
+    for (let touch of e.changedTouches) {
+        if (touch.identifier === touchState.joystick.id) {
+            touchState.joystick.active = false;
+            touchState.joystick.id = null;
+        }
+        if (touch.identifier === touchState.fire.id) {
+            touchState.fire.active = false;
+            touchState.fire.id = null;
+        }
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', (e) => {
+    touchState.joystick.active = false;
+    touchState.joystick.id = null;
+    touchState.fire.active = false;
+    touchState.fire.id = null;
+}, { passive: false });
+
+// Ship selection via touch (tap on ship)
+canvas.addEventListener('click', (e) => {
+    if (gameState === 'shipSelect') {
+        const x = e.clientX;
+        const spacing = canvas.width / 4;
+
+        if (x < spacing * 1.5) {
+            selectedShip = 'falcon';
+            startGame();
+        } else if (x < spacing * 2.5) {
+            selectedShip = 'tank';
+            startGame();
+        } else {
+            selectedShip = 'wasp';
+            startGame();
+        }
+    }
+});
+
+// Draw touch controls
+function drawTouchControls() {
+    if (!isMobile || gameState !== 'playing') return;
+
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+
+    // Draw joystick base
+    const jY = joystickY();
+    ctx.fillStyle = '#333333';
+    ctx.strokeStyle = '#666666';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(joystickX, jY, joystickRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw joystick thumb
+    let thumbX = joystickX;
+    let thumbY = jY;
+    if (touchState.joystick.active) {
+        const dx = touchState.joystick.currentX - touchState.joystick.startX;
+        const dy = touchState.joystick.currentY - touchState.joystick.startY;
+        const dist = Math.min(Math.hypot(dx, dy), joystickRadius);
+        const angle = Math.atan2(dy, dx);
+        thumbX = joystickX + Math.cos(angle) * dist;
+        thumbY = jY + Math.sin(angle) * dist;
+    }
+
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath();
+    ctx.arc(thumbX, thumbY, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw fire button
+    const fbX = fireButtonX();
+    const fbY = fireButtonY();
+    ctx.fillStyle = touchState.fire.active ? '#ff4444' : '#aa2222';
+    ctx.strokeStyle = '#ff6666';
+    ctx.beginPath();
+    ctx.arc(fbX, fbY, fireButtonRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Fire button label
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('FIRE', fbX, fbY);
+
+    ctx.restore();
+}
+
 // Player
 const player = {
     x: 0,
@@ -725,11 +895,20 @@ function update(deltaTime) {
 
     // Player movement (using ship's speed stats)
     const ship = shipTypes[selectedShip];
+
+    // Keyboard controls
     if (keys['ArrowLeft'] || keys['KeyA']) player.vx -= ship.accel;
     if (keys['ArrowRight'] || keys['KeyD']) player.vx += ship.accel;
 
-    // Shooting
-    if (keys['Space']) shoot();
+    // Touch joystick controls
+    if (touchState.joystick.active) {
+        const dx = touchState.joystick.currentX - touchState.joystick.startX;
+        const normalizedX = Math.max(-1, Math.min(1, dx / joystickRadius));
+        player.vx += normalizedX * ship.accel * 1.5;
+    }
+
+    // Shooting (keyboard or touch)
+    if (keys['Space'] || touchState.fire.active) shoot();
 
     // Apply physics
     player.vx *= player.friction;
@@ -1836,6 +2015,7 @@ function draw() {
         drawShield();
         drawParticles();
         drawUI();
+        drawTouchControls();
         if (paused) {
             drawPauseScreen();
         }
