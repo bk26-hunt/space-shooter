@@ -1812,8 +1812,8 @@ function drawShipSelectScreen() {
     ctx.fillStyle = '#00ffff';
     ctx.shadowBlur = 30;
     ctx.shadowColor = '#00ffff';
-    ctx.font = 'bold 48px Arial';
-    ctx.fillText('SELECT YOUR SHIP', canvas.width / 2, 100);
+    ctx.font = isMobile ? 'bold 28px Arial' : 'bold 48px Arial';
+    ctx.fillText('SELECT YOUR SHIP', canvas.width / 2, isMobile ? 60 : 100);
 
     ctx.shadowBlur = 0;
 
@@ -1827,8 +1827,8 @@ function drawShipSelectScreen() {
 
         // Ship number
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 36px Arial';
-        ctx.fillText(`[${index + 1}]`, x, y - 120);
+        ctx.font = isMobile ? 'bold 24px Arial' : 'bold 36px Arial';
+        ctx.fillText(`[${index + 1}]`, x, y - (isMobile ? 80 : 120));
 
         // Draw ship preview
         ctx.save();
@@ -1897,40 +1897,35 @@ function drawShipSelectScreen() {
 
         // Ship name
         ctx.fillStyle = ship.color;
-        ctx.font = 'bold 28px Arial';
+        ctx.font = isMobile ? 'bold 20px Arial' : 'bold 28px Arial';
         ctx.fillText(ship.name, x, y + 70);
 
         // Description
         ctx.fillStyle = '#aaaaaa';
-        ctx.font = '18px Arial';
-        ctx.fillText(ship.description, x, y + 100);
+        ctx.font = isMobile ? '12px Arial' : '18px Arial';
+        ctx.fillText(ship.description, x, y + 95);
 
-        // Stats with color coding
-        ctx.font = '16px Arial';
-
-        // Speed stat
-        const speedLabel = ship.speed >= 4 ? 'Fast' : ship.speed >= 3 ? 'Medium' : 'Slow';
+        // Stats with color coding - simplified for mobile
+        const speedLabel = ship.speed >= 4 ? 'Fast' : ship.speed >= 3 ? 'Med' : 'Slow';
         const speedColor = ship.speed >= 4 ? '#00ff88' : ship.speed >= 3 ? '#ffff00' : '#ff6666';
-        ctx.fillStyle = '#888888';
-        ctx.fillText('Speed: ', x - 40, y + 130);
-        ctx.fillStyle = speedColor;
-        ctx.fillText(speedLabel, x + 20, y + 130);
-
-        // Fire rate stat
-        const fireLabel = ship.shootDelay <= 150 ? 'Fast' : ship.shootDelay <= 200 ? 'Medium' : 'Slow';
+        const fireLabel = ship.shootDelay <= 150 ? 'Fast' : ship.shootDelay <= 200 ? 'Med' : 'Slow';
         const fireColor = ship.shootDelay <= 150 ? '#00ff88' : ship.shootDelay <= 200 ? '#ffff00' : '#ff6666';
-        ctx.fillStyle = '#888888';
-        ctx.fillText('Fire Rate: ', x - 40, y + 155);
-        ctx.fillStyle = fireColor;
-        ctx.fillText(fireLabel, x + 30, y + 155);
-
-        // Shots stat
-        const shotLabel = ship.shotCount === 3 ? '3 (spread)' : '1';
+        const shotLabel = ship.shotCount === 3 ? '3x' : '1x';
         const shotColor = ship.shotCount >= 3 ? '#00ff88' : '#ffff00';
-        ctx.fillStyle = '#888888';
-        ctx.fillText('Shots: ', x - 40, y + 180);
+
+        ctx.font = isMobile ? '11px Arial' : '16px Arial';
+
+        // Speed
+        ctx.fillStyle = speedColor;
+        ctx.fillText(speedLabel, x, y + (isMobile ? 115 : 130));
+
+        // Fire rate
+        ctx.fillStyle = fireColor;
+        ctx.fillText(fireLabel, x, y + (isMobile ? 132 : 155));
+
+        // Shots
         ctx.fillStyle = shotColor;
-        ctx.fillText(shotLabel, x + 15, y + 180);
+        ctx.fillText(shotLabel, x, y + (isMobile ? 149 : 180));
     });
 
     // Instructions
