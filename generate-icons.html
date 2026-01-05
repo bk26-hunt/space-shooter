@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Space Shooter Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #333;
+            margin: 10px;
+        }
+        button {
+            background: #00aa44;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #00cc55;
+        }
+        .icons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .icon-box {
+            background: #2a2a4e;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        h3 {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Space Shooter Icon Generator</h1>
+    <p>Click each button to download the icons you need for the Play Store</p>
+
+    <div class="icons">
+        <div class="icon-box">
+            <canvas id="icon512" width="512" height="512"></canvas>
+            <h3>512x512 (Play Store)</h3>
+            <button onclick="download('icon512', 'icon-512.png')">Download</button>
+        </div>
+        <div class="icon-box">
+            <canvas id="icon192" width="192" height="192"></canvas>
+            <h3>192x192 (PWA)</h3>
+            <button onclick="download('icon192', 'icon-192.png')">Download</button>
+        </div>
+        <div class="icon-box">
+            <canvas id="feature" width="1024" height="500"></canvas>
+            <h3>1024x500 (Feature Graphic)</h3>
+            <button onclick="download('feature', 'feature-graphic.png')">Download</button>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, size);
+            gradient.addColorStop(0, '#000022');
+            gradient.addColorStop(1, '#000044');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Stars
+            for (let i = 0; i < 30; i++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.3})`;
+                ctx.beginPath();
+                ctx.arc(
+                    Math.random() * size,
+                    Math.random() * size,
+                    Math.random() * size/100 + 1,
+                    0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+
+            // Draw spaceship (Falcon style)
+            const cx = size / 2;
+            const cy = size / 2;
+            const scale = size / 6;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            // Glow
+            ctx.shadowBlur = size / 10;
+            ctx.shadowColor = '#00ffff';
+
+            // Ship body
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -scale * 1.5);
+            ctx.lineTo(-scale * 0.8, scale);
+            ctx.lineTo(0, scale * 0.6);
+            ctx.lineTo(scale * 0.8, scale);
+            ctx.closePath();
+            ctx.fill();
+
+            // Wings
+            ctx.beginPath();
+            ctx.moveTo(-scale * 0.8, scale * 0.3);
+            ctx.lineTo(-scale * 1.3, scale * 0.8);
+            ctx.lineTo(-scale * 0.8, scale * 0.6);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(scale * 0.8, scale * 0.3);
+            ctx.lineTo(scale * 1.3, scale * 0.8);
+            ctx.lineTo(scale * 0.8, scale * 0.6);
+            ctx.closePath();
+            ctx.fill();
+
+            // Cockpit
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, -scale * 0.2, scale * 0.2, scale * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Engine glow
+            ctx.fillStyle = '#ff6600';
+            ctx.shadowColor = '#ff6600';
+            ctx.beginPath();
+            ctx.moveTo(-scale * 0.3, scale);
+            ctx.lineTo(0, scale * 1.5);
+            ctx.lineTo(scale * 0.3, scale);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawFeatureGraphic(canvas) {
+            const ctx = canvas.getContext('2d');
+            const w = 1024, h = 500;
+
+            // Background
+            const gradient = ctx.createLinearGradient(0, 0, w, h);
+            gradient.addColorStop(0, '#000022');
+            gradient.addColorStop(0.5, '#000044');
+            gradient.addColorStop(1, '#000022');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+
+            // Stars
+            for (let i = 0; i < 100; i++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.3})`;
+                ctx.beginPath();
+                ctx.arc(Math.random() * w, Math.random() * h, Math.random() * 2 + 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Title
+            ctx.fillStyle = '#00ffff';
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#00ffff';
+            ctx.font = 'bold 72px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('SPACE SHOOTER', w/2, 120);
+
+            // Subtitle
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '32px Arial';
+            ctx.fillText('Classic Arcade Action', w/2, 170);
+
+            // Draw 3 ships
+            const ships = [
+                { x: w/4, color: '#00ffff', name: 'Falcon' },
+                { x: w/2, color: '#ff6600', name: 'Tank' },
+                { x: 3*w/4, color: '#ffff00', name: 'Wasp' }
+            ];
+
+            ships.forEach(ship => {
+                ctx.save();
+                ctx.translate(ship.x, 320);
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = ship.color;
+                ctx.fillStyle = ship.color;
+
+                // Simple ship shape
+                ctx.beginPath();
+                ctx.moveTo(0, -50);
+                ctx.lineTo(-25, 30);
+                ctx.lineTo(0, 20);
+                ctx.lineTo(25, 30);
+                ctx.closePath();
+                ctx.fill();
+
+                // Engine
+                ctx.fillStyle = '#ff6600';
+                ctx.beginPath();
+                ctx.moveTo(-10, 30);
+                ctx.lineTo(0, 50);
+                ctx.lineTo(10, 30);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+
+                // Ship name
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = ship.color;
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(ship.name, ship.x, 420);
+            });
+
+            // Features
+            ctx.fillStyle = '#aaaaaa';
+            ctx.font = '20px Arial';
+            ctx.fillText('3 Ships • Boss Battles • Power-ups • Touch Controls', w/2, 470);
+        }
+
+        function download(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Generate all icons on load
+        window.onload = function() {
+            drawIcon(document.getElementById('icon512'), 512);
+            drawIcon(document.getElementById('icon192'), 192);
+            drawFeatureGraphic(document.getElementById('feature'));
+        };
+    </script>
+</body>
+</html>
