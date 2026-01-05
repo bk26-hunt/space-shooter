@@ -919,8 +919,13 @@ function update(deltaTime) {
     player.x += player.vx * ship.speed;
     player.y += player.vy * ship.speed;
 
-    // Keep player in bounds
-    player.x = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.x));
+    // Wrap player horizontally (go off left, appear on right and vice versa)
+    if (player.x < -player.width / 2) {
+        player.x = canvas.width + player.width / 2;
+    } else if (player.x > canvas.width + player.width / 2) {
+        player.x = -player.width / 2;
+    }
+    // Keep player in vertical bounds
     player.y = Math.max(player.height / 2, Math.min(canvas.height - player.height / 2, player.y));
 
     // Update bullets
