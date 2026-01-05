@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.bk26_hunt.twa",
+        "sha256_cert_fingerprints": ["11:21:48:D9:77:CF:F9:A1:91:96:69:4F:25:E9:EE:FC:4D:B6:97:08:9F:99:13:3D:29:71:B6:B2:5B:CE:BF:9C"]
+      }
+    }]
