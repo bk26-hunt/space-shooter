@@ -1,0 +1,4 @@
+# PWABuilder packages contain signing keystores and passwords - never commit
+SpaceShooter - Google Play package*/
+SpaceShooter - Google Play package*.zip
+proxy_list.txt
