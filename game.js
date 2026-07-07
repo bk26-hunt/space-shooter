@@ -2,13 +2,26 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set canvas size to window size
+// Virtual resolution: the game world is always VIRTUAL_HEIGHT units
+// tall regardless of screen size, and CSS stretches the canvas to
+// fill the window. This keeps the field of view (and reaction time)
+// identical on a phone and a desktop monitor.
+const VIRTUAL_HEIGHT = 900;
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const aspect = window.innerWidth / window.innerHeight;
+    canvas.height = VIRTUAL_HEIGHT;
+    canvas.width = Math.round(VIRTUAL_HEIGHT * aspect);
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+
+// Convert a touch position (CSS pixels) to game world coordinates
+function touchToWorld(touch) {
+    return {
+        x: touch.clientX * (canvas.width / window.innerWidth),
+        y: touch.clientY * (canvas.height / window.innerHeight)
+    };
+}
 
 // Game state
 let gameState = 'start'; // 'start', 'shipSelect', 'playing', 'gameOver'
@@ -361,13 +374,15 @@ const touchState = {
     }
 };
 
-const joystickRadius = 60;
-const joystickX = 100;
-const joystickY = () => canvas.height - 120;
+// Sized in world units: on a phone the canvas is displayed smaller,
+// so these are larger than they'd be in raw screen pixels
+const joystickRadius = 90;
+const joystickX = 140;
+const joystickY = () => canvas.height - 150;
 
-const fireButtonRadius = 50;
-const fireButtonX = () => canvas.width - 100;
-const fireButtonY = () => canvas.height - 120;
+const fireButtonRadius = 75;
+const fireButtonX = () => canvas.width - 140;
+const fireButtonY = () => canvas.height - 150;
 
 // Touch event handlers
 canvas.addEventListener('touchstart', (e) => {
@@ -378,8 +393,7 @@ canvas.addEventListener('touchstart', (e) => {
     if (gameState !== 'playing') return;
 
     for (let touch of e.changedTouches) {
-        const x = touch.clientX;
-        const y = touch.clientY;
+        const { x, y } = touchToWorld(touch);
 
         // Check if touch is on fire button (right side)
         const fbX = fireButtonX();
@@ -407,8 +421,9 @@ canvas.addEventListener('touchmove', (e) => {
 
     for (let touch of e.changedTouches) {
         if (touch.identifier === touchState.joystick.id) {
-            touchState.joystick.currentX = touch.clientX;
-            touchState.joystick.currentY = touch.clientY;
+            const { x, y } = touchToWorld(touch);
+            touchState.joystick.currentX = x;
+            touchState.joystick.currentY = y;
         }
     }
 }, { passive: false });
