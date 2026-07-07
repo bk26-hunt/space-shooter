@@ -313,34 +313,23 @@ window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     if (e.code === 'Space') {
         e.preventDefault();
-        if (gameState === 'start') {
-            gameState = 'shipSelect';
-        } else if (gameState === 'gameOver') {
-            gameState = 'shipSelect';
+        if (gameState === 'start' || gameState === 'gameOver') {
+            setGameState('shipSelect');
         }
     }
 
     // Ship selection (1, 2, 3 keys on ship select screen)
     if (gameState === 'shipSelect') {
-        if (e.code === 'Digit1') {
-            selectedShip = 'falcon';
-            startGame();
-        }
-        if (e.code === 'Digit2') {
-            selectedShip = 'tank';
-            startGame();
-        }
-        if (e.code === 'Digit3') {
-            selectedShip = 'wasp';
-            startGame();
-        }
+        if (e.code === 'Digit1') chooseShip('falcon');
+        if (e.code === 'Digit2') chooseShip('tank');
+        if (e.code === 'Digit3') chooseShip('wasp');
     }
 
     // Difficulty settings (E, M, H keys) - only on start screen
     if (gameState === 'start') {
-        if (e.code === 'KeyE') currentDifficulty = 'easy';
-        if (e.code === 'KeyM') currentDifficulty = 'medium';
-        if (e.code === 'KeyH') currentDifficulty = 'hard';
+        if (e.code === 'KeyE') setDifficulty('easy');
+        if (e.code === 'KeyM') setDifficulty('medium');
+        if (e.code === 'KeyH') setDifficulty('hard');
     }
 
     // Pause toggle (P key) - only during gameplay
@@ -384,19 +373,9 @@ const fireButtonY = () => canvas.height - 120;
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
 
-    // Handle menu navigation - tap anywhere to proceed
-    if (gameState === 'start') {
-        gameState = 'shipSelect';
-        return;
-    } else if (gameState === 'gameOver') {
-        gameState = 'shipSelect';
-        return;
-    } else if (gameState === 'shipSelect') {
-        // preventDefault() suppresses the synthetic 'click' event,
-        // so ship selection must be handled here for touch
-        selectShipAtX(e.changedTouches[0].clientX);
-        return;
-    }
+    // Menus are DOM overlays with their own buttons; the canvas
+    // only handles gameplay touches
+    if (gameState !== 'playing') return;
 
     for (let touch of e.changedTouches) {
         const x = touch.clientX;
@@ -456,25 +435,64 @@ canvas.addEventListener('touchcancel', (e) => {
     touchState.fire.id = null;
 }, { passive: false });
 
-// Ship selection by horizontal position (shared by mouse click and touch)
-function selectShipAtX(x) {
-    const spacing = canvas.width / 4;
+// ===== DOM menu system =====
+// Each game state has a matching HTML overlay; buttons are real DOM
+// elements so taps work natively on any device
+const menuScreens = {
+    start: document.getElementById('startMenu'),
+    shipSelect: document.getElementById('shipMenu'),
+    gameOver: document.getElementById('gameOverMenu')
+};
 
-    if (x < spacing * 1.5) {
-        selectedShip = 'falcon';
-    } else if (x < spacing * 2.5) {
-        selectedShip = 'tank';
-    } else {
-        selectedShip = 'wasp';
+function setGameState(state) {
+    gameState = state;
+    for (const key in menuScreens) {
+        menuScreens[key].classList.toggle('visible', key === state);
     }
+    if (state === 'start') {
+        document.getElementById('startHighScore').textContent =
+            highScore > 0 ? `High Score: ${highScore}` : '';
+    } else if (state === 'gameOver') {
+        document.getElementById('finalScore').textContent = `Final Score: ${score}`;
+        document.getElementById('newHighScore').style.visibility =
+            (score >= highScore && score > 0) ? 'visible' : 'hidden';
+    }
+}
+
+function chooseShip(key) {
+    selectedShip = key;
     startGame();
 }
 
-canvas.addEventListener('click', (e) => {
-    if (gameState === 'shipSelect') {
-        selectShipAtX(e.clientX);
-    }
+const diffDescriptions = {
+    easy: 'Bigger UFOs, slower enemies, more time between spawns',
+    medium: 'Balanced gameplay for a fair challenge',
+    hard: 'Smaller UFOs, faster enemies, rapid spawns'
+};
+
+function setDifficulty(key) {
+    currentDifficulty = key;
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.diff === key);
+    });
+    document.getElementById('diffDescription').textContent = diffDescriptions[key];
+}
+
+document.querySelectorAll('.ship-card').forEach(btn => {
+    btn.addEventListener('click', () => chooseShip(btn.dataset.ship));
 });
+document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => setDifficulty(btn.dataset.diff));
+});
+document.getElementById('startBtn').addEventListener('click', () => setGameState('shipSelect'));
+document.getElementById('playAgainBtn').addEventListener('click', () => setGameState('shipSelect'));
+
+// Browsers keep the AudioContext suspended until a user gesture
+document.addEventListener('pointerdown', () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+});
+
+setGameState('start');
 
 // Draw touch controls
 function drawTouchControls() {
@@ -569,7 +587,7 @@ function initStars() {
 
 // Start/restart game
 function startGame() {
-    gameState = 'playing';
+    setGameState('playing');
     paused = false;
     score = 0;
     lives = 3;
@@ -1156,7 +1174,7 @@ function update(deltaTime) {
 
 // Game over
 function gameOver() {
-    gameState = 'gameOver';
+    setGameState('gameOver');
     stopMusic();
     if (score > highScore) {
         highScore = score;
@@ -1758,230 +1776,7 @@ function drawUI() {
     ctx.restore();
 }
 
-function drawStartScreen() {
-    ctx.save();
 
-    // Title
-    ctx.fillStyle = '#00ffff';
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = '#00ffff';
-    ctx.font = 'bold 72px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('SPACE SHOOTER', canvas.width / 2, canvas.height / 2 - 80);
-
-    // Instructions
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 0;
-    ctx.font = '28px Arial';
-    if (isMobile) {
-        // Draw a big START button for mobile
-        const btnY = canvas.height / 2 + 40;
-        const btnW = 200;
-        const btnH = 60;
-
-        ctx.fillStyle = '#00aa44';
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#00ff66';
-        ctx.fillRect(canvas.width / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
-
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 28px Arial';
-        ctx.fillText('TAP TO START', canvas.width / 2, btnY + 10);
-
-        ctx.font = '16px Arial';
-        ctx.fillStyle = '#aaaaaa';
-        ctx.fillText('Use joystick to move', canvas.width / 2, canvas.height / 2 + 110);
-        ctx.fillText('FIRE button to shoot', canvas.width / 2, canvas.height / 2 + 135);
-    } else {
-        ctx.fillText('Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 20);
-        ctx.font = '20px Arial';
-        ctx.fillStyle = '#aaaaaa';
-        ctx.fillText('Arrow Keys / WASD to Move', canvas.width / 2, canvas.height / 2 + 70);
-        ctx.fillText('SPACE to Shoot', canvas.width / 2, canvas.height / 2 + 100);
-    }
-
-    // Difficulty setting
-    const diffSettings = gameDifficulty[currentDifficulty];
-    ctx.fillStyle = diffSettings.color;
-    ctx.font = 'bold 22px Arial';
-    ctx.fillText(`Game Difficulty: ${diffSettings.name}`, canvas.width / 2, canvas.height / 2 + 210);
-    ctx.fillStyle = '#888888';
-    ctx.font = '16px Arial';
-    ctx.fillText('Press E (Easy) / M (Medium) / H (Hard)', canvas.width / 2, canvas.height / 2 + 235);
-
-    // Difficulty description
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#666666';
-    if (currentDifficulty === 'easy') {
-        ctx.fillText('Bigger UFOs, slower enemies, more time between spawns', canvas.width / 2, canvas.height / 2 + 260);
-    } else if (currentDifficulty === 'medium') {
-        ctx.fillText('Balanced gameplay for a fair challenge', canvas.width / 2, canvas.height / 2 + 260);
-    } else {
-        ctx.fillText('Smaller UFOs, faster enemies, rapid spawns', canvas.width / 2, canvas.height / 2 + 260);
-    }
-
-    // High score
-    if (highScore > 0) {
-        ctx.fillStyle = '#ffff00';
-        ctx.font = '24px Arial';
-        ctx.fillText(`High Score: ${highScore}`, canvas.width / 2, canvas.height / 2 + 310);
-    }
-
-    ctx.restore();
-}
-
-function drawShipSelectScreen() {
-    ctx.save();
-    ctx.textAlign = 'center';
-
-    // Title
-    ctx.fillStyle = '#00ffff';
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = '#00ffff';
-    ctx.font = isMobile ? 'bold 28px Arial' : 'bold 48px Arial';
-    ctx.fillText('SELECT YOUR SHIP', canvas.width / 2, isMobile ? 60 : 100);
-
-    ctx.shadowBlur = 0;
-
-    const shipKeys = ['falcon', 'tank', 'wasp'];
-    const spacing = canvas.width / 4;
-
-    shipKeys.forEach((key, index) => {
-        const ship = shipTypes[key];
-        const x = spacing * (index + 1);
-        const y = canvas.height / 2 - 50;
-
-        // Ship number
-        ctx.fillStyle = '#ffffff';
-        ctx.font = isMobile ? 'bold 24px Arial' : 'bold 36px Arial';
-        ctx.fillText(`[${index + 1}]`, x, y - (isMobile ? 80 : 120));
-
-        // Draw ship preview
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = ship.glowColor;
-
-        if (key === 'falcon') {
-            // Sleek pointed ship
-            ctx.fillStyle = ship.color;
-            ctx.beginPath();
-            ctx.moveTo(0, -40);
-            ctx.lineTo(-20, 30);
-            ctx.lineTo(0, 20);
-            ctx.lineTo(20, 30);
-            ctx.closePath();
-            ctx.fill();
-            // Wings
-            ctx.beginPath();
-            ctx.moveTo(-20, 10);
-            ctx.lineTo(-35, 25);
-            ctx.lineTo(-20, 20);
-            ctx.closePath();
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(20, 10);
-            ctx.lineTo(35, 25);
-            ctx.lineTo(20, 20);
-            ctx.closePath();
-            ctx.fill();
-        } else if (key === 'tank') {
-            // Wide chunky ship
-            ctx.fillStyle = ship.color;
-            ctx.beginPath();
-            ctx.moveTo(0, -30);
-            ctx.lineTo(-30, 0);
-            ctx.lineTo(-35, 30);
-            ctx.lineTo(35, 30);
-            ctx.lineTo(30, 0);
-            ctx.closePath();
-            ctx.fill();
-            // Cannons
-            ctx.fillRect(-28, -10, 8, 30);
-            ctx.fillRect(20, -10, 8, 30);
-        } else if (key === 'wasp') {
-            // Small compact ship
-            ctx.fillStyle = ship.color;
-            ctx.beginPath();
-            ctx.moveTo(0, -30);
-            ctx.lineTo(-15, 5);
-            ctx.lineTo(-10, 25);
-            ctx.lineTo(10, 25);
-            ctx.lineTo(15, 5);
-            ctx.closePath();
-            ctx.fill();
-            // Stinger shape at back
-            ctx.beginPath();
-            ctx.moveTo(-5, 25);
-            ctx.lineTo(0, 35);
-            ctx.lineTo(5, 25);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        ctx.restore();
-
-        // Ship name
-        ctx.fillStyle = ship.color;
-        ctx.font = isMobile ? 'bold 20px Arial' : 'bold 28px Arial';
-        ctx.fillText(ship.name, x, y + 70);
-
-        // Description
-        ctx.fillStyle = '#aaaaaa';
-        ctx.font = isMobile ? '12px Arial' : '18px Arial';
-        ctx.fillText(ship.description, x, y + 95);
-
-        // Stats with color coding - simplified for mobile
-        const speedLabel = ship.speed >= 4 ? 'Fast' : ship.speed >= 3 ? 'Med' : 'Slow';
-        const speedColor = ship.speed >= 4 ? '#00ff88' : ship.speed >= 3 ? '#ffff00' : '#ff6666';
-        const fireLabel = ship.shootDelay <= 150 ? 'Fast' : ship.shootDelay <= 200 ? 'Med' : 'Slow';
-        const fireColor = ship.shootDelay <= 150 ? '#00ff88' : ship.shootDelay <= 200 ? '#ffff00' : '#ff6666';
-        const shotLabel = ship.shotCount === 3 ? '3x' : '1x';
-        const shotColor = ship.shotCount >= 3 ? '#00ff88' : '#ffff00';
-
-        ctx.font = isMobile ? '11px Arial' : '16px Arial';
-
-        // Speed
-        ctx.fillStyle = speedColor;
-        ctx.fillText(speedLabel, x, y + (isMobile ? 115 : 130));
-
-        // Fire rate
-        ctx.fillStyle = fireColor;
-        ctx.fillText(fireLabel, x, y + (isMobile ? 132 : 155));
-
-        // Shots
-        ctx.fillStyle = shotColor;
-        ctx.fillText(shotLabel, x, y + (isMobile ? 149 : 180));
-
-        // SELECT button for mobile
-        if (isMobile) {
-            const btnY = y + 185;
-            const btnW = 80;
-            const btnH = 35;
-
-            ctx.fillStyle = ship.color;
-            ctx.globalAlpha = 0.3;
-            ctx.fillRect(x - btnW / 2, btnY - btnH / 2, btnW, btnH);
-            ctx.globalAlpha = 1;
-
-            ctx.strokeStyle = ship.color;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x - btnW / 2, btnY - btnH / 2, btnW, btnH);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText('SELECT', x, btnY + 5);
-        }
-    });
-
-    // Instructions
-    ctx.fillStyle = '#666666';
-    ctx.font = '20px Arial';
-    ctx.fillText(isMobile ? 'Tap a ship to select' : 'Press 1, 2, or 3 to select your ship', canvas.width / 2, canvas.height - 80);
-
-    ctx.restore();
-}
 
 function drawPauseScreen() {
     ctx.save();
@@ -2007,54 +1802,6 @@ function drawPauseScreen() {
     ctx.restore();
 }
 
-function drawGameOverScreen() {
-    ctx.save();
-
-    // Game Over text
-    ctx.fillStyle = '#ff4444';
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = '#ff4444';
-    ctx.font = 'bold 72px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 60);
-
-    // Score
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 0;
-    ctx.font = '36px Arial';
-    ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
-
-    // New high score
-    if (score >= highScore && score > 0) {
-        ctx.fillStyle = '#ffff00';
-        ctx.font = '28px Arial';
-        ctx.fillText('NEW HIGH SCORE!', canvas.width / 2, canvas.height / 2 + 70);
-    }
-
-    // Restart instruction
-    if (isMobile) {
-        // Draw a PLAY AGAIN button for mobile
-        const btnY = canvas.height / 2 + 120;
-        const btnW = 180;
-        const btnH = 50;
-
-        ctx.fillStyle = '#00aa44';
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00ff66';
-        ctx.fillRect(canvas.width / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
-
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText('PLAY AGAIN', canvas.width / 2, btnY + 8);
-    } else {
-        ctx.fillStyle = '#aaaaaa';
-        ctx.font = '24px Arial';
-        ctx.fillText('Press SPACE to Play Again', canvas.width / 2, canvas.height / 2 + 130);
-    }
-
-    ctx.restore();
-}
 
 // Main render function
 function draw() {
@@ -2068,11 +1815,9 @@ function draw() {
     // Always draw stars
     drawStars();
 
-    if (gameState === 'start') {
-        drawStartScreen();
-    } else if (gameState === 'shipSelect') {
-        drawShipSelectScreen();
-    } else if (gameState === 'playing') {
+    // Menu screens (start, shipSelect, gameOver) are DOM overlays;
+    // the canvas just shows the starfield behind them
+    if (gameState === 'playing') {
         drawBullets();
         drawEnemyBullets();
         drawPowerUps();
@@ -2094,7 +1839,6 @@ function draw() {
         drawBoss();
         drawParticles();
         drawUI();
-        drawGameOverScreen();
     }
 }
 

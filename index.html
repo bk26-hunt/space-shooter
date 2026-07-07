@@ -23,6 +23,66 @@
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+
+    <!-- Menus are real DOM buttons overlaid on the canvas so taps work
+         natively on touch devices (canvas only handles gameplay input) -->
+    <div id="startMenu" class="menu">
+        <h1 class="title">SPACE SHOOTER</h1>
+        <div class="diff-row">
+            <button class="diff-btn selected" data-diff="easy">EASY</button>
+            <button class="diff-btn" data-diff="medium">MEDIUM</button>
+            <button class="diff-btn" data-diff="hard">HARD</button>
+        </div>
+        <p id="diffDescription" class="hint">Bigger UFOs, slower enemies, more time between spawns</p>
+        <button id="startBtn" class="big-btn">START</button>
+        <p id="startHighScore" class="highscore"></p>
+    </div>
+
+    <div id="shipMenu" class="menu">
+        <h1 class="title small">SELECT YOUR SHIP</h1>
+        <div class="ship-row">
+            <button class="ship-card" data-ship="falcon">
+                <svg viewBox="-40 -45 80 85" class="ship-art">
+                    <g fill="#00ffff">
+                        <polygon points="0,-40 -20,30 0,20 20,30"/>
+                        <polygon points="-20,10 -35,25 -20,20"/>
+                        <polygon points="20,10 35,25 20,20"/>
+                    </g>
+                </svg>
+                <span class="ship-name" style="color:#00ffff">FALCON</span>
+                <span class="ship-desc">Fastest ship, single shot</span>
+            </button>
+            <button class="ship-card" data-ship="tank">
+                <svg viewBox="-40 -45 80 85" class="ship-art">
+                    <g fill="#ff6600">
+                        <polygon points="0,-30 -30,0 -35,30 35,30 30,0"/>
+                        <rect x="-28" y="-10" width="8" height="30"/>
+                        <rect x="20" y="-10" width="8" height="30"/>
+                    </g>
+                </svg>
+                <span class="ship-name" style="color:#ff6600">TANK</span>
+                <span class="ship-desc">Slowest but 3-shot spread</span>
+            </button>
+            <button class="ship-card" data-ship="wasp">
+                <svg viewBox="-40 -45 80 85" class="ship-art">
+                    <g fill="#ffff00">
+                        <polygon points="0,-30 -15,5 -10,25 10,25 15,5"/>
+                        <polygon points="-5,25 0,35 5,25"/>
+                    </g>
+                </svg>
+                <span class="ship-name" style="color:#ffff00">WASP</span>
+                <span class="ship-desc">Fastest fire rate</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="gameOverMenu" class="menu">
+        <h1 class="title red">GAME OVER</h1>
+        <p id="finalScore" class="score"></p>
+        <p id="newHighScore" class="highscore">NEW HIGH SCORE!</p>
+        <button id="playAgainBtn" class="big-btn">PLAY AGAIN</button>
+    </div>
+
     <script src="game.js"></script>
     <script>
         // Register service worker for PWA
