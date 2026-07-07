@@ -7,10 +7,46 @@ const ctx = canvas.getContext('2d');
 // fill the window. This keeps the field of view (and reaction time)
 // identical on a phone and a desktop monitor.
 const VIRTUAL_HEIGHT = 900;
+
+// Background layers, rebuilt on resize: a cached gradient (creating
+// one per frame is slow on phones) and a pre-rendered nebula
+let bgGradient = null;
+let nebulaCanvas = null;
+let nebulaOffset = 0;
+
+function buildBackground() {
+    bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGradient.addColorStop(0, '#000022');
+    bgGradient.addColorStop(1, '#000044');
+
+    nebulaCanvas = document.createElement('canvas');
+    nebulaCanvas.width = canvas.width;
+    nebulaCanvas.height = canvas.height;
+    const nctx = nebulaCanvas.getContext('2d');
+    const tints = [
+        'rgba(90, 0, 140, ',
+        'rgba(0, 70, 140, ',
+        'rgba(0, 110, 110, ',
+        'rgba(140, 0, 70, '
+    ];
+    for (let i = 0; i < 6; i++) {
+        const x = Math.random() * nebulaCanvas.width;
+        const y = Math.random() * nebulaCanvas.height;
+        const r = 150 + Math.random() * 250;
+        const tint = tints[i % tints.length];
+        const g = nctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, tint + '0.22)');
+        g.addColorStop(1, tint + '0)');
+        nctx.fillStyle = g;
+        nctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+}
+
 function resizeCanvas() {
     const aspect = window.innerWidth / window.innerHeight;
     canvas.height = VIRTUAL_HEIGHT;
     canvas.width = Math.round(VIRTUAL_HEIGHT * aspect);
+    buildBackground();
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
@@ -42,6 +78,27 @@ let enemyBullets = [];
 // Dying hearts animation
 let dyingHearts = [];
 
+// Screen shake, hit flash, and floating score popups (visual juice)
+let shakeTime = 0;
+let shakeDuration = 0;
+let shakeIntensity = 0;
+let flashAlpha = 0;
+let scorePopups = [];
+
+function addShake(intensity, duration) {
+    shakeIntensity = Math.max(shakeIntensity, intensity);
+    shakeTime = Math.max(shakeTime, duration);
+    shakeDuration = Math.max(shakeDuration, duration);
+}
+
+function addFlash(alpha) {
+    flashAlpha = Math.max(flashAlpha, alpha);
+}
+
+function addScorePopup(x, y, text, color = '#ffff00', size = 26) {
+    scorePopups.push({ x, y, text, color, size, life: 1 });
+}
+
 // Function to handle losing a life with animation
 function loseLife() {
     if (lives <= 0) return;
@@ -60,6 +117,8 @@ function loseLife() {
     });
 
     playLoseLifeSound();
+    addShake(10, 300);
+    addFlash(0.35);
     lives--;
 }
 
@@ -589,15 +648,24 @@ let stars = [];
 // Initialize stars for background
 function initStars() {
     stars = [];
-    for (let i = 0; i < 150; i++) {
-        stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 0.5,
-            speed: Math.random() * 2 + 0.5,
-            brightness: Math.random()
-        });
-    }
+    // Three parallax depth layers: far stars are small, dim, and
+    // slow; near stars are big, bright, and fast
+    const layers = [
+        { count: 70, speed: 0.4, size: 1.2, alpha: 0.4 },
+        { count: 50, speed: 1.2, size: 2.0, alpha: 0.7 },
+        { count: 30, speed: 2.6, size: 3.0, alpha: 1.0 }
+    ];
+    layers.forEach(layer => {
+        for (let i = 0; i < layer.count; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: layer.size * (0.6 + Math.random() * 0.4),
+                speed: layer.speed * (0.8 + Math.random() * 0.4),
+                brightness: layer.alpha * (0.7 + Math.random() * 0.3)
+            });
+        }
+    });
 }
 
 // Start/restart game
@@ -617,6 +685,7 @@ function startGame() {
     lastPowerUpSpawn = 0;
     activePowerUps = { rapidFire: 0, tripleShot: 0, shield: false };
     dyingHearts = [];
+    scorePopups = [];
 
     // Apply selected ship stats
     const ship = shipTypes[selectedShip];
@@ -967,6 +1036,20 @@ function update(deltaTime) {
     // Keep player in vertical bounds
     player.y = Math.max(player.height / 2, Math.min(canvas.height - player.height / 2, player.y));
 
+    // Engine exhaust trail
+    if (Math.random() < 0.6) {
+        particles.push({
+            x: player.x + (Math.random() - 0.5) * 8,
+            y: player.y + player.height / 2,
+            vx: (Math.random() - 0.5) * 0.5 - player.vx * 0.3,
+            vy: 2 + Math.random() * 2,
+            size: Math.random() * 3 + 1.5,
+            color: Math.random() < 0.5 ? '#ff6600' : '#ffaa00',
+            life: 0.5,
+            decay: 0.05
+        });
+    }
+
     // Update bullets
     bullets = bullets.filter(bullet => {
         bullet.y -= bullet.speed;
@@ -1019,6 +1102,8 @@ function update(deltaTime) {
                 if (enemies[i].health <= 0) {
                     playHitSound();
                     createExplosion(enemies[i].x, enemies[i].y, enemies[i].color, 20);
+                    addShake(3, 100);
+                    addScorePopup(enemies[i].x, enemies[i].y, '+' + enemies[i].points);
                     score += enemies[i].points;
                     // Start cooldown if fast (orange) enemy was defeated
                     if (enemies[i].type === 'fast') {
@@ -1086,6 +1171,9 @@ function update(deltaTime) {
                             );
                         }, i * 150);
                     }
+                    addShake(18, 600);
+                    addFlash(0.5);
+                    addScorePopup(bossX, bossY, '+' + boss.points, '#ffdd00', 44);
                     score += boss.points;
                     bossesDefeated++;
                     boss = null;
@@ -1148,6 +1236,7 @@ function update(deltaTime) {
 
                 // Visual feedback
                 createExplosion(powerUp.x, powerUp.y, typeInfo.color, 20);
+                addScorePopup(powerUp.x, powerUp.y, typeInfo.name, typeInfo.color, 24);
                 playHitSound();
 
                 // Remove the bullet that hit
@@ -1177,6 +1266,13 @@ function update(deltaTime) {
         return heart.life > 0;
     });
 
+    // Update score popups (drift up and fade)
+    scorePopups = scorePopups.filter(p => {
+        p.y -= 0.8;
+        p.life -= 0.02;
+        return p.life > 0;
+    });
+
     // Update stars (parallax)
     stars.forEach(star => {
         star.y += star.speed;
@@ -1202,6 +1298,9 @@ function gameOver() {
 function drawPlayer() {
     ctx.save();
     ctx.translate(player.x, player.y);
+
+    // Engine flame grows with ship velocity
+    const thrust = 1 + Math.min(1.5, (Math.abs(player.vx) + Math.abs(player.vy)) * 0.3);
 
     // Glow effect
     ctx.shadowBlur = 20;
@@ -1243,7 +1342,7 @@ function drawPlayer() {
         ctx.shadowColor = 'rgba(255, 102, 0, 0.8)';
         ctx.beginPath();
         ctx.moveTo(-8, player.height / 3);
-        ctx.lineTo(0, player.height / 3 + 15 + Math.random() * 10);
+        ctx.lineTo(0, player.height / 3 + (15 + Math.random() * 10) * thrust);
         ctx.lineTo(8, player.height / 3);
         ctx.closePath();
         ctx.fill();
@@ -1279,13 +1378,13 @@ function drawPlayer() {
         ctx.shadowColor = 'rgba(255, 102, 0, 0.8)';
         ctx.beginPath();
         ctx.moveTo(-15, player.height / 3);
-        ctx.lineTo(-12, player.height / 3 + 12 + Math.random() * 8);
+        ctx.lineTo(-12, player.height / 3 + (12 + Math.random() * 8) * thrust);
         ctx.lineTo(-9, player.height / 3);
         ctx.closePath();
         ctx.fill();
         ctx.beginPath();
         ctx.moveTo(9, player.height / 3);
-        ctx.lineTo(12, player.height / 3 + 12 + Math.random() * 8);
+        ctx.lineTo(12, player.height / 3 + (12 + Math.random() * 8) * thrust);
         ctx.lineTo(15, player.height / 3);
         ctx.closePath();
         ctx.fill();
@@ -1335,7 +1434,7 @@ function drawPlayer() {
         ctx.shadowColor = 'rgba(255, 102, 0, 0.8)';
         ctx.beginPath();
         ctx.moveTo(-5, player.height / 2);
-        ctx.lineTo(0, player.height / 2 + 10 + Math.random() * 8);
+        ctx.lineTo(0, player.height / 2 + (10 + Math.random() * 8) * thrust);
         ctx.lineTo(5, player.height / 2);
         ctx.closePath();
         ctx.fill();
@@ -1366,6 +1465,10 @@ function drawEnemies() {
     enemies.forEach(enemy => {
         ctx.save();
         ctx.translate(enemy.x, enemy.y);
+        // Hover wobble and pulse so ships feel alive
+        ctx.rotate(Math.sin(Date.now() / 300 + enemy.x * 0.05) * 0.08);
+        const pulse = 1 + Math.sin(Date.now() / 250 + enemy.y * 0.03) * 0.05;
+        ctx.scale(pulse, pulse);
         ctx.shadowBlur = 15;
         ctx.shadowColor = enemy.glowColor;
 
@@ -1644,13 +1747,27 @@ function drawParticles() {
 }
 
 function drawStars() {
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
     stars.forEach(star => {
-        ctx.save();
-        ctx.globalAlpha = 0.5 + star.brightness * 0.5;
-        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = star.brightness;
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
+    });
+    ctx.restore();
+}
+
+function drawScorePopups() {
+    scorePopups.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.font = `bold ${p.size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+        ctx.fillText(p.text, p.x, p.y);
         ctx.restore();
     });
 }
@@ -1820,14 +1937,27 @@ function drawPauseScreen() {
 
 // Main render function
 function draw() {
-    // Clear canvas with gradient background
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#000022');
-    gradient.addColorStop(1, '#000044');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
 
-    // Always draw stars
+    // Screen shake: offset the whole scene, decaying over time
+    if (shakeTime > 0) {
+        shakeTime -= 16;
+        const s = shakeIntensity * Math.max(0, shakeTime) / shakeDuration;
+        ctx.translate((Math.random() - 0.5) * 2 * s, (Math.random() - 0.5) * 2 * s);
+        if (shakeTime <= 0) {
+            shakeIntensity = 0;
+            shakeDuration = 0;
+        }
+    }
+
+    // Background: cached gradient + slowly drifting nebula, drawn
+    // oversized so shake never reveals the canvas edge
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(-25, -25, canvas.width + 50, canvas.height + 50);
+    nebulaOffset = (nebulaOffset + 0.15) % canvas.height;
+    ctx.drawImage(nebulaCanvas, 0, nebulaOffset);
+    ctx.drawImage(nebulaCanvas, 0, nebulaOffset - canvas.height);
+
     drawStars();
 
     // Menu screens (start, shipSelect, gameOver) are DOM overlays;
@@ -1841,6 +1971,7 @@ function draw() {
         drawPlayer();
         drawShield();
         drawParticles();
+        drawScorePopups();
         drawUI();
         drawTouchControls();
         if (paused) {
@@ -1853,7 +1984,19 @@ function draw() {
         drawEnemies();
         drawBoss();
         drawParticles();
+        drawScorePopups();
         drawUI();
+    }
+
+    ctx.restore();
+
+    // Hit flash drawn on top, unaffected by shake
+    if (flashAlpha > 0.01) {
+        ctx.globalAlpha = flashAlpha;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        flashAlpha *= 0.85;
     }
 }
 
