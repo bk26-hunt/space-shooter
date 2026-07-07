@@ -391,6 +391,11 @@ canvas.addEventListener('touchstart', (e) => {
     } else if (gameState === 'gameOver') {
         gameState = 'shipSelect';
         return;
+    } else if (gameState === 'shipSelect') {
+        // preventDefault() suppresses the synthetic 'click' event,
+        // so ship selection must be handled here for touch
+        selectShipAtX(e.changedTouches[0].clientX);
+        return;
     }
 
     for (let touch of e.changedTouches) {
@@ -451,22 +456,23 @@ canvas.addEventListener('touchcancel', (e) => {
     touchState.fire.id = null;
 }, { passive: false });
 
-// Ship selection via touch (tap on ship)
+// Ship selection by horizontal position (shared by mouse click and touch)
+function selectShipAtX(x) {
+    const spacing = canvas.width / 4;
+
+    if (x < spacing * 1.5) {
+        selectedShip = 'falcon';
+    } else if (x < spacing * 2.5) {
+        selectedShip = 'tank';
+    } else {
+        selectedShip = 'wasp';
+    }
+    startGame();
+}
+
 canvas.addEventListener('click', (e) => {
     if (gameState === 'shipSelect') {
-        const x = e.clientX;
-        const spacing = canvas.width / 4;
-
-        if (x < spacing * 1.5) {
-            selectedShip = 'falcon';
-            startGame();
-        } else if (x < spacing * 2.5) {
-            selectedShip = 'tank';
-            startGame();
-        } else {
-            selectedShip = 'wasp';
-            startGame();
-        }
+        selectShipAtX(e.clientX);
     }
 });
 

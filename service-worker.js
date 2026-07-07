@@ -1,10 +1,12 @@
-const CACHE_NAME = 'space-shooter-v1';
+const CACHE_NAME = 'space-shooter-v2';
+// Paths are relative to the service worker's location so they work
+// when the site is served from a subpath (e.g. /space-shooter/)
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/game.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './style.css',
+  './game.js',
+  './manifest.json'
 ];
 
 // Install event - cache files
