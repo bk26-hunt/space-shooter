@@ -227,10 +227,17 @@ const gameDifficulty = {
 };
 let currentDifficulty = 'easy';
 
-// Sound system using Web Audio API
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// Sound system using Web Audio API (game still works if audio is
+// unavailable, e.g. restrictive privacy modes)
+let audioCtx = null;
+try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+} catch (e) {
+    console.warn('Web Audio unavailable, sound disabled');
+}
 
 function playShootSound() {
+    if (!audioCtx) return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
@@ -249,6 +256,7 @@ function playShootSound() {
 }
 
 function playHitSound() {
+    if (!audioCtx) return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
@@ -267,6 +275,7 @@ function playHitSound() {
 }
 
 function playLoseLifeSound() {
+    if (!audioCtx) return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
@@ -285,6 +294,7 @@ function playLoseLifeSound() {
 }
 
 function playBossDefeatSound() {
+    if (!audioCtx) return;
     // Epic explosion sound for boss defeat
     for (let i = 0; i < 5; i++) {
         setTimeout(() => {
@@ -308,7 +318,7 @@ let musicPlaying = false;
 let musicNodes = [];
 
 function startMusic() {
-    if (musicPlaying) return;
+    if (!audioCtx || musicPlaying) return;
     musicPlaying = true;
 
     // Bass line
@@ -563,7 +573,7 @@ document.getElementById('playAgainBtn').addEventListener('click', () => setGameS
 
 // Browsers keep the AudioContext suspended until a user gesture
 document.addEventListener('pointerdown', () => {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 });
 
 setGameState('start');
